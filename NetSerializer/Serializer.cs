@@ -130,9 +130,9 @@ namespace NetSerializer
 				while (m_runtimeTypeIDList.ContainsTypeID(m_nextAvailableTypeID))
 					m_nextAvailableTypeID++;
 
-				uint typeID = m_nextAvailableTypeID++;
+				var typeID = m_nextAvailableTypeID++;
 
-				ITypeSerializer serializer = GetTypeSerializer(type);
+				var serializer = GetTypeSerializer(type);
 
 				var data = new TypeData(type, typeID, serializer);
 				m_runtimeTypeMap[type] = data;
@@ -157,7 +157,7 @@ namespace NetSerializer
 			foreach (var kvp in typeMap)
 			{
 				var type = kvp.Key;
-				uint typeID = kvp.Value;
+				var typeID = kvp.Value;
 
 				if (type == null)
 					throw new ArgumentException("Null type in dictionary");
@@ -182,7 +182,7 @@ namespace NetSerializer
 				if (type.ContainsGenericParameters)
 					throw new NotSupportedException(String.Format("Type {0} contains generic parameters", type.FullName));
 
-				ITypeSerializer serializer = GetTypeSerializer(type);
+				var serializer = GetTypeSerializer(type);
 
 				var data = new TypeData(type, typeID, serializer);
 				m_runtimeTypeMap[type] = data;
@@ -244,7 +244,7 @@ namespace NetSerializer
 				var bytes = sha256.ComputeHash(stream);
 
 				var sb = new System.Text.StringBuilder();
-				foreach (byte b in bytes)
+				foreach (var b in bytes)
 					sb.Append(b.ToString("x2"));
 				return sb.ToString();
 			}
@@ -385,7 +385,7 @@ namespace NetSerializer
 		HashSet<Type> Collect(Type rootType)
 		{
 			var l = new HashSet<Type>();
-			Stack<Type> stack = new Stack<Type>();
+			var stack = new Stack<Type>();
 
 			stack.Push(rootType);
 
@@ -399,7 +399,7 @@ namespace NetSerializer
 				if (type.ContainsGenericParameters)
 					throw new NotSupportedException(String.Format("Type {0} contains generic parameters", type.FullName));
 
-				ITypeSerializer serializer = m_runtimeTypeMap[type].TypeSerializer;
+				var serializer = m_runtimeTypeMap[type].TypeSerializer;
 
 				foreach (var t in serializer.GetSubtypes(type))
 				{
@@ -419,7 +419,7 @@ namespace NetSerializer
 
 			var data = m_runtimeTypeMap[type];
 
-			ITypeSerializer serializer = data.TypeSerializer;
+			var serializer = data.TypeSerializer;
 
 			MethodInfo writer;
 
@@ -450,7 +450,7 @@ namespace NetSerializer
 
 			var data = m_runtimeTypeMap[type];
 
-			ITypeSerializer serializer = data.TypeSerializer;
+			var serializer = data.TypeSerializer;
 
 			var writer = data.WriterMethodInfo as DynamicMethod;
 			if (writer == null)
@@ -468,7 +468,7 @@ namespace NetSerializer
 			if (m_runtimeTypeMap[rootType].WriterMethodInfo != null)
 				return;
 
-			List<Type> types = Collect(rootType).Where(t => m_runtimeTypeMap[t].WriterMethodInfo == null).ToList();
+			var types = Collect(rootType).Where(t => m_runtimeTypeMap[t].WriterMethodInfo == null).ToList();
 
 			foreach (var type in types)
 				GenerateWriterStub(type);
@@ -515,7 +515,7 @@ namespace NetSerializer
 
 			var data = m_runtimeTypeMap[type];
 
-			ITypeSerializer serializer = data.TypeSerializer;
+			var serializer = data.TypeSerializer;
 
 			MethodInfo reader;
 
@@ -546,7 +546,7 @@ namespace NetSerializer
 
 			var data = m_runtimeTypeMap[type];
 
-			ITypeSerializer serializer = data.TypeSerializer;
+			var serializer = data.TypeSerializer;
 
 			var reader = data.ReaderMethodInfo as DynamicMethod;
 			if (reader == null)
@@ -564,7 +564,7 @@ namespace NetSerializer
 			if (m_runtimeTypeMap[rootType].ReaderMethodInfo != null)
 				return;
 
-			List<Type> types = Collect(rootType).Where(t => m_runtimeTypeMap[t].ReaderMethodInfo == null).ToList();
+			var types = Collect(rootType).Where(t => m_runtimeTypeMap[t].ReaderMethodInfo == null).ToList();
 
 			foreach (var type in types)
 				GenerateReaderStub(type);

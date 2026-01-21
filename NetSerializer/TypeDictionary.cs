@@ -41,7 +41,7 @@ namespace NetSerializer
 
 		public TypeDictionary()
 		{
-			int numBuckets = (int)(InitialLength * (1.0f / LoadLimit));
+			var numBuckets = (int)(InitialLength * (1.0f / LoadLimit));
 			m_buckets = new Pair[numBuckets][];
 		}
 
@@ -55,13 +55,13 @@ namespace NetSerializer
 		{
 			var buckets = Volatile.Read(ref m_buckets);
 
-			int idx = Hash(key, buckets.Length);
+			var idx = Hash(key, buckets.Length);
 
-			Pair[] arr = Volatile.Read(ref buckets[idx]);
+			var arr = Volatile.Read(ref buckets[idx]);
 			if (arr == null)
 				goto not_found;
 
-			for (int i = 0; i < arr.Length; ++i)
+			for (var i = 0; i < arr.Length; ++i)
 			{
 				if (arr[i].Key == key)
 				{
@@ -81,13 +81,13 @@ namespace NetSerializer
 			{
 				var buckets = Volatile.Read(ref m_buckets);
 
-				int idx = Hash(key, buckets.Length);
+				var idx = Hash(key, buckets.Length);
 
-				Pair[] arr = Volatile.Read(ref buckets[idx]);
+				var arr = Volatile.Read(ref buckets[idx]);
 				if (arr == null)
 					throw new KeyNotFoundException(String.Format("Type not found {0}", key));
 
-				for (int i = 0; i < arr.Length; ++i)
+				for (var i = 0; i < arr.Length; ++i)
 				{
 					if (arr[i].Key == key)
 						return arr[i].Value;
@@ -124,13 +124,13 @@ namespace NetSerializer
 
 		static void Add(Pair[][] buckets, Type key, TypeData value)
 		{
-			int idx = Hash(key, buckets.Length);
+			var idx = Hash(key, buckets.Length);
 
-			Pair[] arr = buckets[idx];
+			var arr = buckets[idx];
 			if (arr == null)
 				buckets[idx] = arr = new Pair[InitialListSize];
 
-			for (int i = 0; i < arr.Length; ++i)
+			for (var i = 0; i < arr.Length; ++i)
 			{
 				if (arr[i].Key == null)
 				{
@@ -147,7 +147,7 @@ namespace NetSerializer
 
 		static int Hash(Type key, int bucketsLen)
 		{
-			uint h = (uint)System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(key);
+			var h = (uint)System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(key);
 			h %= (uint)bucketsLen;
 			return (int)h;
 		}
@@ -179,7 +179,7 @@ namespace NetSerializer
 		[Conditional("DEBUG")]
 		public void DebugDump()
 		{
-			int occupied = m_buckets.Count(i => i != null);
+			var occupied = m_buckets.Count(i => i != null);
 
 			Console.WriteLine("bucket arr len {0}, items {1}, occupied buckets {2}", m_buckets.Length, m_numItems, occupied);
 
@@ -189,7 +189,7 @@ namespace NetSerializer
 				if (list == null)
 					continue;
 
-				int c = list.TakeWhile(p => p.Key != null).Count();
+				var c = list.TakeWhile(p => p.Key != null).Count();
 				if (countmap.ContainsKey(c) == false)
 					countmap[c] = 0;
 				countmap[c]++;

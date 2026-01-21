@@ -21,7 +21,7 @@ namespace NetSerializer
 	{
 		public static IEnumerable<FieldInfo> GetFieldInfos(Type type)
 		{
-			Debug.Assert(type.IsSerializable);
+			Debug.Assert(Helpers.IsTypeSerializable(type));
 
 			var fields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly)
 				.Where(fi => (fi.Attributes & FieldAttributes.NotSerialized) == 0)
@@ -90,13 +90,13 @@ namespace NetSerializer
 		/// </summary>
 		public static Delegate CreateSerializeDelegate(Type paramType, TypeData data)
 		{
-			Type writerType = data.Type;
+			var writerType = data.Type;
 
 			if (paramType != writerType && paramType != typeof(object))
 				throw new Exception();
 
-			bool needTypeConv = paramType != writerType;
-			bool needsInstanceParameter = data.WriterNeedsInstance;
+			var needTypeConv = paramType != writerType;
+			var needsInstanceParameter = data.WriterNeedsInstance;
 
 			var delegateType = typeof(SerializeDelegate<>).MakeGenericType(paramType);
 
@@ -139,13 +139,13 @@ namespace NetSerializer
 		/// </summary>
 		public static Delegate CreateDeserializeDelegate(Type paramType, TypeData data)
 		{
-			Type readerType = data.Type;
+			var readerType = data.Type;
 
 			if (paramType != readerType && paramType != typeof(object))
 				throw new Exception();
 
-			bool needTypeConv = paramType != readerType;
-			bool needsInstanceParameter = data.ReaderNeedsInstance;
+			var needTypeConv = paramType != readerType;
+			var needsInstanceParameter = data.ReaderNeedsInstance;
 
 			var delegateType = typeof(DeserializeDelegate<>).MakeGenericType(paramType);
 
@@ -197,6 +197,11 @@ namespace NetSerializer
 			il.Emit(OpCodes.Ret);
 
 			return wrapper.CreateDelegate(delegateType);
+		}
+
+		public static bool IsTypeSerializable(Type type)
+		{
+			return type.GetCustomAttributes().OfType<SerializableAttribute>().Any();
 		}
 	}
 }

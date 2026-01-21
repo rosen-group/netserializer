@@ -150,7 +150,7 @@ namespace NetSerializer
 		{
 			var kvpArray = new KeyValuePair<TKey, TValue>[value.Count];
 
-			int i = 0;
+			var i = 0;
 			foreach (var kvp in value)
 				kvpArray[i++] = kvp;
 

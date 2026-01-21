@@ -11,10 +11,8 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Diagnostics;
-#if NETCOREAPP
 using System.Text.Unicode;
 using System.Buffers;
-#endif
 
 namespace NetSerializer
 {
@@ -59,12 +57,12 @@ namespace NetSerializer
 
 		static uint ReadVarint32(Stream stream)
 		{
-			int result = 0;
-			int offset = 0;
+			var result = 0;
+			var offset = 0;
 
 			for (; offset < 32; offset += 7)
 			{
-				int b = stream.ReadByte();
+				var b = stream.ReadByte();
 				if (b == -1)
 					throw new EndOfStreamException();
 
@@ -88,11 +86,11 @@ namespace NetSerializer
 		static ulong ReadVarint64(Stream stream)
 		{
 			long result = 0;
-			int offset = 0;
+			var offset = 0;
 
 			for (; offset < 64; offset += 7)
 			{
-				int b = stream.ReadByte();
+				var b = stream.ReadByte();
 				if (b == -1)
 					throw new EndOfStreamException();
 
@@ -215,59 +213,33 @@ namespace NetSerializer
 			value = DecodeZigZag64(ReadVarint64(stream));
 		}
 
-#if !NO_UNSAFE
 		public static unsafe void WritePrimitive(Stream stream, float value)
 		{
-			uint v = *(uint*)(&value);
+			var v = *(uint*)(&value);
 			WriteVarint32(stream, v);
 		}
 
 		public static unsafe void ReadPrimitive(Stream stream, out float value)
 		{
-			uint v = ReadVarint32(stream);
+			var v = ReadVarint32(stream);
 			value = *(float*)(&v);
 		}
 
 		public static unsafe void WritePrimitive(Stream stream, double value)
 		{
-			ulong v = *(ulong*)(&value);
+			var v = *(ulong*)(&value);
 			WriteVarint64(stream, v);
 		}
 
 		public static unsafe void ReadPrimitive(Stream stream, out double value)
 		{
-			ulong v = ReadVarint64(stream);
+			var v = ReadVarint64(stream);
 			value = *(double*)(&v);
 		}
-#else
-		public static void WritePrimitive(Stream stream, float value)
-		{
-			WritePrimitive(stream, (double)value);
-		}
-
-		public static void ReadPrimitive(Stream stream, out float value)
-		{
-			double v;
-			ReadPrimitive(stream, out v);
-			value = (float)v;
-		}
-
-		public static void WritePrimitive(Stream stream, double value)
-		{
-			ulong v = (ulong)BitConverter.DoubleToInt64Bits(value);
-			WriteVarint64(stream, v);
-		}
-
-		public static void ReadPrimitive(Stream stream, out double value)
-		{
-			ulong v = ReadVarint64(stream);
-			value = BitConverter.Int64BitsToDouble((long)v);
-		}
-#endif
 
 		public static void WritePrimitive(Stream stream, DateTime value)
 		{
-			long v = value.ToBinary();
+			var v = value.ToBinary();
 			WritePrimitive(stream, v);
 		}
 
@@ -283,17 +255,17 @@ namespace NetSerializer
 
 		public static void WritePrimitive(Stream stream, decimal value)
 		{
-			int[] bits = Decimal.GetBits(value);
+			var bits = Decimal.GetBits(value);
 
 			ulong low = (uint)bits[0];
-			ulong mid = ((ulong)(uint)bits[1]) << 32;
-			ulong lowmid = low | mid;
+			var mid = ((ulong)(uint)bits[1]) << 32;
+			var lowmid = low | mid;
 
-			uint high = (uint)bits[2];
+			var high = (uint)bits[2];
 
-			uint scale = ((uint)bits[3] >> 15) & 0x01fe;
-			uint sign = ((uint)bits[3]) >> 31;
-			uint scaleSign = scale | sign;
+			var scale = ((uint)bits[3] >> 15) & 0x01fe;
+			var sign = ((uint)bits[3]) >> 31;
+			var scaleSign = scale | sign;
 
 			WritePrimitive(stream, lowmid);
 			WritePrimitive(stream, high);
@@ -309,8 +281,8 @@ namespace NetSerializer
 			ReadPrimitive(stream, out high);
 			ReadPrimitive(stream, out scaleSign);
 
-			int scale = (int)((scaleSign & ~1) << 15);
-			int sign = (int)((scaleSign & 1) << 31);
+			var scale = (int)((scaleSign & ~1) << 15);
+			var sign = (int)((scaleSign & 1) << 31);
 
 			var arr = s_decimalBitsArray;
 			if (arr == null)
@@ -324,7 +296,6 @@ namespace NetSerializer
 			value = new Decimal(arr);
 		}
 
-#if NETCOREAPP
 		public static void WritePrimitive(Stream stream, string value)
 		{
 			if (value == null)
@@ -437,214 +408,6 @@ namespace NetSerializer
 				Debug.Assert(status == OperationStatus.Done);
 			}
 		}
-#elif NO_UNSAFE
-		public static void WritePrimitive(Stream stream, string value)
-		{
-			if (value == null)
-			{
-				WritePrimitive(stream, (uint)0);
-				return;
-			}
-			else if (value.Length == 0)
-			{
-				WritePrimitive(stream, (uint)1);
-				return;
-			}
-
-			var encoding = new UTF8Encoding(false, true);
-
-			int len = encoding.GetByteCount(value);
-
-			WritePrimitive(stream, (uint)len + 1);
-			WritePrimitive(stream, (uint)value.Length);
-
-			var buf = new byte[len];
-
-			encoding.GetBytes(value, 0, value.Length, buf, 0);
-
-			stream.Write(buf, 0, len);
-		}
-
-		public static void ReadPrimitive(Stream stream, out string value)
-		{
-			uint len;
-			ReadPrimitive(stream, out len);
-
-			if (len == 0)
-			{
-				value = null;
-				return;
-			}
-			else if (len == 1)
-			{
-				value = string.Empty;
-				return;
-			}
-
-			uint totalChars;
-			ReadPrimitive(stream, out totalChars);
-
-			len -= 1;
-
-			var encoding = new UTF8Encoding(false, true);
-
-			var buf = new byte[len];
-
-			int l = 0;
-
-			while (l < len)
-			{
-				int r = stream.Read(buf, l, (int)len - l);
-				if (r == 0)
-					throw new EndOfStreamException();
-				l += r;
-			}
-
-			value = encoding.GetString(buf);
-		}
-#else
-		sealed class StringHelper
-		{
-			public StringHelper()
-			{
-				this.Encoding = new UTF8Encoding(false, true);
-			}
-
-			Encoder m_encoder;
-			Decoder m_decoder;
-
-			byte[] m_byteBuffer;
-			char[] m_charBuffer;
-
-			public UTF8Encoding Encoding { get; private set; }
-			public Encoder Encoder { get { if (m_encoder == null) m_encoder = this.Encoding.GetEncoder(); return m_encoder; } }
-			public Decoder Decoder { get { if (m_decoder == null) m_decoder = this.Encoding.GetDecoder(); return m_decoder; } }
-
-			public byte[] ByteBuffer { get { if (m_byteBuffer == null) m_byteBuffer = new byte[StringByteBufferLength]; return m_byteBuffer; } }
-			public char[] CharBuffer { get { if (m_charBuffer == null) m_charBuffer = new char[StringCharBufferLength]; return m_charBuffer; } }
-		}
-
-		[ThreadStatic]
-		static StringHelper s_stringHelper;
-
-		public unsafe static void WritePrimitive(Stream stream, string value)
-		{
-			if (value == null)
-			{
-				WritePrimitive(stream, (uint)0);
-				return;
-			}
-			else if (value.Length == 0)
-			{
-				WritePrimitive(stream, (uint)1);
-				return;
-			}
-
-			var helper = s_stringHelper;
-			if (helper == null)
-				s_stringHelper = helper = new StringHelper();
-
-			var encoder = helper.Encoder;
-			var buf = helper.ByteBuffer;
-
-			int totalChars = value.Length;
-			int totalBytes;
-
-			fixed (char* ptr = value)
-				totalBytes = encoder.GetByteCount(ptr, totalChars, true);
-
-			WritePrimitive(stream, (uint)totalBytes + 1);
-			WritePrimitive(stream, (uint)totalChars);
-
-			int p = 0;
-			bool completed = false;
-
-			while (completed == false)
-			{
-				int charsConverted;
-				int bytesConverted;
-
-				fixed (char* src = value)
-				fixed (byte* dst = buf)
-				{
-					encoder.Convert(src + p, totalChars - p, dst, buf.Length, true,
-						out charsConverted, out bytesConverted, out completed);
-				}
-
-				stream.Write(buf, 0, bytesConverted);
-
-				p += charsConverted;
-			}
-		}
-
-		public static void ReadPrimitive(Stream stream, out string value)
-		{
-			uint totalBytes;
-			ReadPrimitive(stream, out totalBytes);
-
-			if (totalBytes == 0)
-			{
-				value = null;
-				return;
-			}
-			else if (totalBytes == 1)
-			{
-				value = string.Empty;
-				return;
-			}
-
-			totalBytes -= 1;
-
-			uint totalChars;
-			ReadPrimitive(stream, out totalChars);
-
-			var helper = s_stringHelper;
-			if (helper == null)
-				s_stringHelper = helper = new StringHelper();
-
-			var decoder = helper.Decoder;
-			var buf = helper.ByteBuffer;
-			char[] chars;
-			if (totalChars <= StringCharBufferLength)
-				chars = helper.CharBuffer;
-			else
-				chars = new char[totalChars];
-
-			int streamBytesLeft = (int)totalBytes;
-
-			int cp = 0;
-
-			while (streamBytesLeft > 0)
-			{
-				int bytesInBuffer = stream.Read(buf, 0, Math.Min(buf.Length, streamBytesLeft));
-				if (bytesInBuffer == 0)
-					throw new EndOfStreamException();
-
-				streamBytesLeft -= bytesInBuffer;
-				bool flush = streamBytesLeft == 0 ? true : false;
-
-				bool completed = false;
-
-				int p = 0;
-
-				while (completed == false)
-				{
-					int charsConverted;
-					int bytesConverted;
-
-					decoder.Convert(buf, p, bytesInBuffer - p,
-						chars, cp, (int)totalChars - cp,
-						flush,
-						out bytesConverted, out charsConverted, out completed);
-
-					p += bytesConverted;
-					cp += charsConverted;
-				}
-			}
-
-			value = new string(chars, 0, (int)totalChars);
-		}
-#endif
 
 		public static void WritePrimitive(Stream stream, byte[] value)
 		{
@@ -680,11 +443,11 @@ namespace NetSerializer
 			len -= 1;
 
 			value = new byte[len];
-			int l = 0;
+			var l = 0;
 
 			while (l < len)
 			{
-				int r = stream.Read(value, l, (int)len - l);
+				var r = stream.Read(value, l, (int)len - l);
 				if (r == 0)
 					throw new EndOfStreamException();
 				l += r;

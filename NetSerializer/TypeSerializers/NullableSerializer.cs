@@ -38,8 +38,8 @@ namespace NetSerializer
 
 			var noValueLabel = il.DefineLabel();
 
-			MethodInfo getHasValue = type.GetProperty("HasValue").GetGetMethod();
-			MethodInfo getValue = type.GetProperty("Value").GetGetMethod();
+			var getHasValue = type.GetProperty("HasValue").GetGetMethod();
+			var getValue = type.GetProperty("Value").GetGetMethod();
 
 			var data = serializer.GetIndirectData(valueType);
 

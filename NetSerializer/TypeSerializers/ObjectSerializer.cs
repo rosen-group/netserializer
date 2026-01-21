@@ -9,7 +9,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 
 namespace NetSerializer
@@ -23,7 +22,7 @@ namespace NetSerializer
 
 		public IEnumerable<Type> GetSubtypes(Type type)
 		{
-			return new Type[0];
+			return Type.EmptyTypes;
 		}
 
 		public MethodInfo GetStaticWriter(Type type)
@@ -46,9 +45,10 @@ namespace NetSerializer
 
 			var type = ob.GetType();
 
+			serializer.Settings.BeforeSerializingObjectOfType?.Invoke(type);
 			SerializeDelegate<object> del;
 
-			uint id = serializer.GetTypeIdAndSerializer(type, out del);
+			var id = serializer.GetTypeIdAndSerializer(type, out del);
 
 			Primitives.WritePrimitive(stream, id);
 
@@ -76,6 +76,7 @@ namespace NetSerializer
 				return;
 			}
 
+			serializer.Settings.BeforeDeserializingObjectWithTypeId?.Invoke(id);
 			var del = serializer.GetDeserializeTrampolineFromId(id);
 			del(serializer, stream, out ob);
 		}
